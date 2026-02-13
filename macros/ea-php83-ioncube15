@@ -1,0 +1,9 @@
+
+%global php_version 8.3
+%global php_parent ea-php83
+%global parent_prefix ea-php83-
+
+%global php_extdir /opt/cpanel/%{php_parent}/root/usr/lib64/php/modules
+%global php_inidir /opt/cpanel/%{php_parent}/root/etc/php.d
+%global php_docdir /opt/cpanel/%{php_parent}/root/usr/share/doc/%{parent_prefix}php-ioncube15
+

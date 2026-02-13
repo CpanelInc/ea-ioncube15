@@ -1,0 +1,12 @@
+{
+    "vars": {
+        "php_zend_api": "",
+        "php_core_api": "",
+        "inifile": "01-ioncube.ini",
+        "php_inidir": "/opt/cpanel/%{php_parent}/root/etc/php.d",
+        "php_extdir": "/opt/cpanel/%{php_parent}/root/usr/lib64/php/modules/",
+        "php_version": "will be reset to the correct value by override_dh_auto_install.sh"
+    },
+    "dont_override_config": 1
+}
+
