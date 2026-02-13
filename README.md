@@ -35,6 +35,15 @@ The result is a tarball that contains:
 - Stable loaders for PHP 5.6-8.4 (from stable release)
 - Beta loader for PHP 8.5 only (from beta release)
 
+### Implementation Details
+
+To accomplish this, `find-latest-version` was made more complex so that `get_for_all_php.pl` can load it as a **modulino**. This allows the script to:
+- Reuse the version-finding logic from `find-latest-version` 
+- Find both the stable and beta versions of the loaders
+- Perform the merging of the tarballs programmatically
+
+This modulino approach avoids code duplication and keeps the version-finding logic centralized in one place.
+
 ### When to Run This Script
 
 **You MUST run this script each time you update the package** until ionCube's stable release includes PHP 8.5 support.
