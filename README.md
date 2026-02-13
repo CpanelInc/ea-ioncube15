@@ -90,7 +90,7 @@ After running `get_for_all_php.pl`:
 Once `get_for_all_php.pl` has been run:
 
 ```bash
-make
+et obs --watch
 ```
 
 This will build the RPM packages using the combined tarball.
