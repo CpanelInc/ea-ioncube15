@@ -1,10 +1,12 @@
-#!/usr/bin/env perl
-# cpanel - find-latest-version                  Copyright(c) 2026 cPanel, L.L.C.
-#                                                           All rights Reserved.
-# copyright@cpanel.net                                         http://cpanel.net
-# This code is subject to the cPanel license. Unauthorized copying is prohibited
+#!/usr/local/cpanel/3rdparty/bin/perl
 
-package ea_repo_name_goes_here::find_latest_version;
+#
+#                                      Copyright 2026 WebPros International, LLC
+#                                                           All rights reserved.
+# copyright@cpanel.net                                         http://cpanel.net
+# This code is subject to the cPanel license. Unauthorized copying is prohibited.
+
+package ea_ioncube15::find_latest_version;
 
 use strict;
 use warnings;
@@ -12,33 +14,83 @@ use warnings;
 use lib "../ea-tools/lib/ea4_tool";    # assumes ea-tools is checked out next to this repo
 use ea4_tool::util ();
 
-ea4_tool::util::find_latest_version(\&_get_required, \&_add_sum) if !caller();
+use HTML::TreeBuilder;
+
+ea4_tool::util::find_latest_version( \&_get_required, \&_add_sum ) if !caller();
 
 ###############
 #### helpers ##
 ###############
 
 sub _get_required {
-   my ($http) = @_;
+    my ( $http, $release_type ) = @_;
 
-   my ( $version, $url, $name );
+    $release_type //= "production";
 
-   my $res  = $http->get("https://repo.example.org/releases");
-   # get $version, $url, $name from $res (and possibly multiple HTTP calls)
-   # die if there is a problem determining any of those values
+    my $listing_url = "https://ioncube.com/loaders.php";
+    my $res         = $http->get($listing_url);
+    if ( !$res->{success} ) {
+        die "Could not GET ioncube dist page ($res->{status} $res->{reason})\n";
+    }
 
-   return ( $version, $url, $name );
+    my ( $version, $url ) = _get_linux64_version( $res->{content}, $release_type );
+
+    die "Did not find a version candidate for this package.\n" if !$version;
+
+    my $ridx = rindex( $url, '/' );
+    die "Unable to determine the tarball name from \"$url\"\n" if ( $ridx < 0 );
+    my $name = substr( $url, $ridx + 1 );
+
+    return ( $version, $url, $name );
 }
 
 sub _add_sum {
-    my ($http, $hr) = @_;
+    my ( $http, $hr ) = @_;
 
-    # Optional: Set $hr->{tarball}{sum}{hex} and $hr->{tarball}{sum}{type} (sha256, sha1, md5, anythign Digest.pm can handle)
+    # Optional: Set $hr->{tarball}{sum}{hex} and $hr->{tarball}{sum}{type} (sha256, sha1, md5, anything Digest.pm can handle)
     #           die if there is a problem determining either of those values
     # otherwise this is a no-op
 
     return;
 }
+
+##########################
+#### helper helpers lol ##
+##########################
+
+sub _get_linux64_version {
+    my ( $html, $release_type ) = @_;
+
+    my $tree = HTML::TreeBuilder->new_from_content($html);
+
+    my $section_id = $release_type eq 'beta' ? 'loaders_beta' : 'loaders_latest';
+    my $section    = $tree->look_down( id => $section_id );
+
+    die "Unable to find $release_type section on ioncube landing page.\n" if !$section;
+
+    my $linux64_elem = $section->look_down(
+        _tag => qr/^(td|a)$/,
+        sub { $_[0]->as_text =~ /Linux \(64 bits\)/ }
+    );
+
+    die "Unable to identify the x86-64 version of ioncube in $release_type section.\n" if !$linux64_elem;
+
+    my $linux64_row = $linux64_elem->parent;
+    my @cells       = $linux64_row->look_down( _tag => 'td' );
+    my $version     = $cells[3] ? $cells[3]->as_text : undef;
+    $version =~ s/^\s+|\s+$//g if $version;
+
+    my $link = $linux64_row->look_down( _tag => 'a', href => qr/tar\.gz/ );
+    my $url  = $link ? $link->attr('href') : undef;
+
+    $tree->delete;
+
+    die "Could not find version and/or tarball in $release_type section.\n" if !$version || !$url;
+
+    return ( $version, $url );
+}
+
+1;
 
 __END__
 
@@ -46,4 +98,13 @@ __END__
 
 =head1 README
 
-… explain nuances of fetching the latest-info for this repo here for future us …
+The tarball does not contain the version in its name.
+
+There is a different distribution archive per architecture:
+
+OBS builds the 32-bit targets as arch 'i586', and more typical
+32-bit architecture is 'i386', but 32-bit archive is named 'x86'.
+64-bit archive is 'x86-64', rather than 'x86_64'.
+
+We only do 64 bit.
+
